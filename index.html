@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Quiz Generator - SambaNova</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://js.puter.com/v2/"></script>
+<style>
+.loader{border-top-color:#3498db;animation:spinner 1.5s linear infinite}
+@keyframes spinner{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@media print{.no-print{display:none!important}body{background:white}.passage-box{max-height:none!important;overflow:visible!important}}
+.passage-box{max-height:280px;overflow-y:auto;scroll-behavior:smooth}
+.passage-box::-webkit-scrollbar{width:6px}
+.passage-box::-webkit-scrollbar-track{background:#fef9c3;border-radius:4px}
+.passage-box::-webkit-scrollbar-thumb{background:#fbbf24;border-radius:4px}
+.quiz-scroll{max-height:82vh;overflow-y:auto;padding-right:4px}
+.quiz-scroll::-webkit-scrollbar{width:6px}
+.quiz-scroll::-webkit-scrollbar-track{background:#f3f4f6;border-radius:4px}
+.quiz-scroll::-webkit-scrollbar-thumb{background:#a5b4fc;border-radius:4px}
+.section-box{padding:14px;border-radius:10px;border:2px solid;margin-top:2px}
+.tts-btn{transition:all .2s}
+.tts-btn:hover{transform:scale(1.05)}
+.tts-btn:active{transform:scale(.97)}
+.tts-word{display:inline}
+.tts-word.active{background:#86efac;border-radius:3px;font-weight:bold;padding:0 1px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.is-speaking{animation:blink 1.2s infinite}
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-8">
+<div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+<!-- LEFT PANEL -->
+<div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 no-print overflow-y-auto" style="max-height:98vh">
+  <h1 class="text-2xl font-bold mb-5 text-indigo-700">⚙️ Quiz Generator Setup</h1>
+  <div class="space-y-4">
+
+    <div id="serverStatus" class="flex items-center gap-2 p-3 rounded-lg text-sm font-medium bg-gray-100 text-gray-500">
+      <div class="w-2.5 h-2.5 rounded-full bg-gray-400" id="statusDot"></div>
+      <span id="statusText">Checking local server...</span>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">SambaNova API Key</label>
+      <div class="relative mt-1">
+        <input type="password" id="apiKey" placeholder="Enter your SambaNova API key"
+          class="w-full p-2 pr-10 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none">
+        <button type="button" id="toggleKey" class="absolute right-2 top-2 text-gray-400 hover:text-gray-700">👁</button>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Model</label>
+      <select id="modelSelect" class="w-full p-2 border rounded-md mt-1 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <option value="Meta-Llama-3.3-70B-Instruct">Llama 3.3 70B Instruct ✅ Recommended</option>
+        <option value="DeepSeek-V3.1">DeepSeek V3.1</option>
+        <option value="MiniMax-M2.7">MiniMax M2.7</option>
+        <option value="Meta-Llama-3.1-8B-Instruct">Llama 3.1 8B (Fastest)</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">CEFR Level</label>
+      <select id="cefrLevel" class="w-full p-2 border rounded-md mt-1 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <option value="A1">A1 – Beginner</option>
+        <option value="A2">A2 – Elementary</option>
+        <option value="B1" selected>B1 – Intermediate</option>
+        <option value="B2">B2 – Upper Intermediate</option>
+        <option value="C1">C1 – Advanced</option>
+        <option value="C2">C2 – Proficiency</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Learning Outcome / Topic</label>
+      <textarea id="outcome" rows="3"
+        placeholder="e.g., A passage on climate change. Use **bold** for key vocabulary."
+        class="w-full p-2 border rounded-md mt-1 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+      <p id="outcomeHint" style="display:none" class="text-xs text-amber-600 mt-1 bg-amber-50 border border-amber-200 rounded p-2">
+        ⚠ Do <strong>NOT</strong> mention word count here — use Min/Max fields below.
+      </p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Question Type</label>
+      <select id="qType" class="w-full p-2 border rounded-md mt-1 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <option value="MCQ">Multiple Choice (MCQ)</option>
+        <option value="True/False">True or False</option>
+        <option value="Cloze">Cloze (Fill in the blanks)</option>
+        <option value="Matching">Matching Pairs</option>
+        <option value="Reading Comprehension">Reading Comprehension (MCQ)</option>
+        <option value="RC_TFNG">Reading Comprehension (T/F/NG)</option>
+        <option value="RC_Completion">Reading Comprehension (Completion)</option>
+        <option value="Short Answer">Short Answer (with Passage)</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Difficulty Level</label>
+      <select id="diffLevel" class="w-full p-2 border rounded-md mt-1 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <option value="Easy">🟢 Easy</option>
+        <option value="Medium" selected>🟡 Medium</option>
+        <option value="Hard">🔴 Hard</option>
+        <option value="Mixed">🎲 Mixed (varied)</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Number of Questions</label>
+      <input type="number" id="qCount" value="5" min="1" max="20"
+        class="w-full p-2 border rounded-md mt-1 focus:ring-2 focus:ring-indigo-500 outline-none">
+    </div>
+
+    <div id="choiceBox" style="display:none" class="section-box border-indigo-300 bg-indigo-50">
+      <label class="block text-sm font-bold text-indigo-700 mb-2">🔢 Choices per Question</label>
+      <div class="flex gap-3 flex-wrap">
+        <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="choiceCount" value="2" class="accent-indigo-600"> <span class="text-sm">2</span></label>
+        <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="choiceCount" value="3" class="accent-indigo-600"> <span class="text-sm">3</span></label>
+        <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="choiceCount" value="4" class="accent-indigo-600" checked> <span class="text-sm font-semibold text-indigo-700">4 (default)</span></label>
+        <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="choiceCount" value="5" class="accent-indigo-600"> <span class="text-sm">5</span></label>
+      </div>
+    </div>
+
+    <!-- RC word count + TTS panel -->
+    <div id="rcWordCountBox" style="display:none" class="section-box border-indigo-400 bg-indigo-50">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-lg">📏</span>
+        <span class="font-bold text-indigo-800 text-sm">Passage Word Count</span>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div class="bg-white border-2 border-indigo-300 rounded-lg p-3">
+          <label class="block text-xs font-bold text-indigo-700 mb-1 uppercase">Min Words</label>
+          <input type="number" id="rcWordMin" value="200" min="50" max="1500" step="10"
+            class="w-full p-2 text-xl font-bold text-indigo-700 text-center border border-indigo-200 rounded-md outline-none bg-indigo-50">
+        </div>
+        <div class="bg-white border-2 border-indigo-300 rounded-lg p-3">
+          <label class="block text-xs font-bold text-indigo-700 mb-1 uppercase">Max Words</label>
+          <input type="number" id="rcWordMax" value="250" min="50" max="1500" step="10"
+            class="w-full p-2 text-xl font-bold text-indigo-700 text-center border border-indigo-200 rounded-md outline-none bg-indigo-50">
+        </div>
+      </div>
+      <div class="text-center text-sm font-semibold text-white bg-indigo-600 rounded-lg py-2 mb-3">
+        🎯 AI will write: <span id="rcRangeDisplay">200–250 words</span>
+      </div>
+
+      <!-- TTS enable toggle -->
+      <div class="p-3 bg-white border-2 border-green-300 rounded-lg">
+        <label class="flex items-center gap-3 cursor-pointer select-none">
+          <input type="checkbox" id="enableTTS" class="w-5 h-5 accent-green-600 cursor-pointer">
+          <div>
+            <div class="font-bold text-green-700 text-sm">🎧 Enable Listening Comprehension Mode</div>
+            <div class="text-xs text-gray-500 mt-0.5">3 engines: ElevenLabs · Puter.js · Browser</div>
+          </div>
+        </label>
+      </div>
+
+      <!-- TTS OPTIONS BOX -->
+      <div id="ttsOptionsBox" style="display:none" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg space-y-3">
+
+        <!-- ENGINE SELECTOR -->
+        <div>
+          <label class="block text-xs font-bold text-green-700 mb-2 uppercase">🔧 TTS Engine</label>
+          <div class="space-y-2">
+            <label class="flex items-start gap-2 bg-white border-2 border-green-400 rounded-lg px-3 py-2 cursor-pointer">
+              <input type="radio" name="ttsEngine" value="elevenlabs" checked class="mt-0.5 accent-green-600" onchange="syncTTSEngineUI()">
+              <div>
+                <div class="font-bold text-green-700 text-sm">🌟 ElevenLabs — Ultra Realistic
+                  <span class="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full ml-1">Most Natural</span>
+                </div>
+                <div class="text-xs text-gray-500">Best quality · Requires free API key</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 cursor-pointer">
+              <input type="radio" name="ttsEngine" value="puter" class="mt-0.5 accent-indigo-600" onchange="syncTTSEngineUI()">
+              <div>
+                <div class="font-bold text-indigo-700 text-sm">🌐 Puter.js — Free &amp; Unlimited
+                  <span class="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full ml-1">No Key Needed</span>
+                </div>
+                <div class="text-xs text-gray-500">AWS Polly · Gemini · xAI · OpenAI voices</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 cursor-pointer">
+              <input type="radio" name="ttsEngine" value="browser" class="mt-0.5 accent-green-600" onchange="syncTTSEngineUI()">
+              <div>
+                <div class="font-semibold text-gray-600 text-sm">🔊 Browser Built-in Voice</div>
+                <div class="text-xs text-gray-400">Free · No key · Word highlighting (Chrome/Edge)</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- ELEVENLABS BOX -->
+        <div id="elevenlabsBox" class="bg-white border border-green-300 rounded-lg p-3 space-y-2">
+          <label class="block text-xs font-bold text-green-700 uppercase">🔑 ElevenLabs API Key</label>
+          <div class="relative">
+            <input type="password" id="elevenApiKey" placeholder="Paste your ElevenLabs API key"
+              class="w-full p-2 pr-8 border border-green-300 rounded-md text-sm outline-none bg-white focus:ring-2 focus:ring-green-400">
+            <button type="button" onclick="var e=document.getElementById('elevenApiKey');e.type=e.type==='password'?'text':'password'" class="absolute right-2 top-2 text-gray-400 text-sm">👁</button>
+          </div>
+          <p class="text-xs text-gray-500">Free tier: 10,000 chars/month at <a href="https://elevenlabs.io" target="_blank" class="text-blue-500 underline">elevenlabs.io</a></p>
+          <label class="block text-xs font-bold text-green-700 uppercase mt-1">🎤 AI Voice</label>
+          <select id="elevenVoiceId" class="w-full p-2 border border-green-300 rounded-md text-sm outline-none bg-white">
+            <option value="21m00Tcm4TlvDq8ikWAM">👩 Rachel — Calm &amp; Clear (ESL Recommended) ⭐</option>
+            <option value="EXAVITQu4vr4xnSDxMaL">👩 Bella — Friendly &amp; Natural</option>
+            <option value="TxGEqnHWrfWFTfGW9XjX">👨 Josh — Warm &amp; Authoritative</option>
+            <option value="VR6AewLTigWG4xSOukaG">👨 Arnold — Deep &amp; Steady</option>
+            <option value="pNInz6obpgDQGcFmaJgB">👨 Adam — Neutral American</option>
+            <option value="ThT5KcBeYPX3keUtsaye">👩 Dorothy — British English</option>
+            <option value="SOYHLrjzK2X1ezoPC6cr">👨 Harry — British Male</option>
+          </select>
+        </div>
+
+        <!-- PUTER BOX -->
+        <div id="puterBox" style="display:none" class="bg-white border border-indigo-300 rounded-lg p-3 space-y-2">
+          <div class="text-xs font-bold text-indigo-700 uppercase">🌐 Puter.js — Free, No Key Required</div>
+          <p class="text-xs text-gray-500">First use opens a free Puter sign-in popup. Completely free, no limits.</p>
+          <label class="block text-xs font-bold text-indigo-700 uppercase mt-1">🎙 Provider</label>
+          <select id="puterProvider" onchange="syncPuterVoiceUI()"
+            class="w-full p-2 border border-indigo-300 rounded-md text-sm outline-none bg-white">
+            <option value="polly">🏆 AWS Polly Neural — Best for ESL ⭐</option>
+            <option value="gemini">✨ Google Gemini 2.5 — Most Human</option>
+            <option value="xai">⚡ xAI Grok — Expressive</option>
+            <option value="openai">🤖 OpenAI TTS — Clear &amp; Natural</option>
+          </select>
+
+          <div id="pollyVoiceBox">
+            <label class="block text-xs font-bold text-indigo-700 uppercase mt-1">🎤 Voice</label>
+            <select id="pollyVoice" class="w-full p-2 border border-indigo-200 rounded-md text-sm outline-none bg-white">
+              <option value="Joanna">👩 Joanna — American Female ⭐ ESL Recommended</option>
+              <option value="Matthew">👨 Matthew — American Male</option>
+              <option value="Amy">👩 Amy — British Female</option>
+              <option value="Brian">👨 Brian — British Male</option>
+              <option value="Emma">👩 Emma — British Neural</option>
+              <option value="Aria">👩 Aria — New Zealand</option>
+            </select>
+          </div>
+
+          <div id="geminiVoiceBox" style="display:none">
+            <label class="block text-xs font-bold text-indigo-700 uppercase mt-1">🎤 Gemini Voice</label>
+            <select id="geminiVoice" class="w-full p-2 border border-indigo-200 rounded-md text-sm outline-none bg-white">
+              <option value="Puck">Puck — Friendly</option>
+              <option value="Charon">Charon — Calm</option>
+              <option value="Kore">Kore — Clear Female</option>
+              <option value="Fenrir">Fenrir — Authoritative</option>
+              <option value="Aoede">Aoede — Warm Female</option>
+            </select>
+          </div>
+
+          <div id="xaiVoiceBox" style="display:none">
+            <label class="block text-xs font-bold text-indigo-700 uppercase mt-1">🎤 xAI Voice</label>
+            <select id="xaiVoice" class="w-full p-2 border border-indigo-200 rounded-md text-sm outline-none bg-white">
+              <option value="ara">ara — Warm ⭐</option>
+              <option value="eve">eve — Energetic</option>
+              <option value="rex">rex — Confident</option>
+              <option value="sal">sal — Smooth</option>
+              <option value="leo">leo — Authoritative</option>
+            </select>
+          </div>
+
+          <div id="openaiVoiceBox" style="display:none">
+            <label class="block text-xs font-bold text-indigo-700 uppercase mt-1">🎤 OpenAI Voice</label>
+            <select id="openaiVoice" class="w-full p-2 border border-indigo-200 rounded-md text-sm outline-none bg-white">
+              <option value="nova">nova — Warm Female ⭐</option>
+              <option value="alloy">alloy — Neutral</option>
+              <option value="echo">echo — Male</option>
+              <option value="shimmer">shimmer — Soft Female</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- BROWSER BOX -->
+        <div id="browserTtsBox" style="display:none" class="space-y-2">
+          <label class="block text-xs font-bold text-green-700 uppercase">🎤 Browser Voice</label>
+          <select id="ttsVoice" class="w-full p-2 border border-green-300 rounded-md text-sm outline-none bg-white">
+            <option value="">⏳ Loading voices...</option>
+          </select>
+          <p class="text-xs text-gray-400">💡 Google/Microsoft voices are most natural.</p>
+          <button id="testVoiceBtn" onclick="testVoice()"
+            class="w-full bg-green-500 hover:bg-green-600 text-white text-sm py-2 rounded-lg font-semibold tts-btn">
+            🔊 Test Browser Voice
+          </button>
+          <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">⚠ Click once after page load to unlock audio in Chrome.</p>
+        </div>
+
+        <!-- SPEED REFERENCE -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-white border border-red-200 rounded p-2"><div class="font-bold text-red-600">🐢 Very Slow (0.6×)</div><div class="text-gray-400">SEN / Very low ability</div></div>
+          <div class="bg-white border border-orange-200 rounded p-2"><div class="font-bold text-orange-600">🐇 Slow (0.8×)</div><div class="text-gray-400">Low / Less able</div></div>
+          <div class="bg-white border border-blue-200 rounded p-2"><div class="font-bold text-blue-600">🚶 Average (0.95×)</div><div class="text-gray-400">Average ability</div></div>
+          <div class="bg-white border border-green-200 rounded p-2"><div class="font-bold text-green-600">🏃 Advanced (1.1×)</div><div class="text-gray-400">Advanced / Native</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RC Completion -->
+    <div id="rcCompletionBox" style="display:none" class="section-box border-purple-400 bg-purple-50 space-y-3">
+      <p class="font-bold text-purple-800 text-sm">✏️ Completion Question Settings</p>
+      <p class="text-xs text-purple-600">Number of questions per word-limit (0 = skip):</p>
+      <div class="grid grid-cols-3 gap-2">
+        <div class="bg-white border-2 border-purple-300 rounded-lg p-2 text-center">
+          <label class="block text-xs font-bold text-purple-700 mb-1">ONE WORD</label>
+          <input type="number" id="rcComp1" value="3" min="0" max="10"
+            class="w-full p-1 text-center border border-purple-200 rounded text-lg font-bold text-purple-700 outline-none bg-purple-50">
+        </div>
+        <div class="bg-white border-2 border-purple-300 rounded-lg p-2 text-center">
+          <label class="block text-xs font-bold text-purple-700 mb-1">TWO WORDS</label>
+          <input type="number" id="rcComp2" value="2" min="0" max="10"
+            class="w-full p-1 text-center border border-purple-200 rounded text-lg font-bold text-purple-700 outline-none bg-purple-50">
+        </div>
+        <div class="bg-white border-2 border-purple-300 rounded-lg p-2 text-center">
+          <label class="block text-xs font-bold text-purple-700 mb-1">THREE WORDS</label>
+          <input type="number" id="rcComp3" value="1" min="0" max="10"
+            class="w-full p-1 text-center border border-purple-200 rounded text-lg font-bold text-purple-700 outline-none bg-purple-50">
+        </div>
+      </div>
+    </div>
+
+    <!-- Cloze Options -->
+    <div id="clozeOptionsBox" style="display:none" class="section-box border-orange-400 bg-orange-50 space-y-4">
+      <p class="font-bold text-orange-800 text-sm">✏️ Cloze Options</p>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-white border-2 border-orange-300 rounded-lg p-3">
+          <label class="block text-xs font-bold text-orange-700 mb-1">Min Words</label>
+          <input type="number" id="clozeWordMin" value="150" min="50" max="1500" step="10"
+            class="w-full p-2 text-xl font-bold text-orange-700 text-center border border-orange-200 rounded-md outline-none bg-orange-50">
+        </div>
+        <div class="bg-white border-2 border-orange-300 rounded-lg p-3">
+          <label class="block text-xs font-bold text-orange-700 mb-1">Max Words</label>
+          <input type="number" id="clozeWordMax" value="200" min="50" max="1500" step="10"
+            class="w-full p-2 text-xl font-bold text-orange-700 text-center border border-orange-200 rounded-md outline-none bg-orange-50">
+        </div>
+      </div>
+      <div class="text-center text-sm font-semibold text-white bg-orange-500 rounded-lg py-2">
+        🎯 Cloze passage: <span id="clozeRangeDisplay">150–200 words</span>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-orange-700 mb-2 uppercase">📖 Add RC Questions After Cloze?</label>
+        <div class="flex gap-4">
+          <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="clozeAddRC" value="no" checked class="accent-orange-500"> <span class="text-sm">No</span></label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="clozeAddRC" value="yes" class="accent-orange-500"> <span class="text-sm">Yes</span></label>
+        </div>
+      </div>
+      <div id="clozeRCSubBox" style="display:none" class="bg-white border border-orange-300 rounded-lg p-3 space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-orange-700 mb-1">Number of RC Questions</label>
+          <input type="number" id="clozeRCCount" value="4" min="1" max="20" class="w-full p-2 border border-orange-300 rounded-md outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-orange-700 mb-2">Type of RC Questions</label>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="clozeRCType" value="MCQ" checked class="accent-orange-500"> <span class="text-sm">MCQ</span></label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="clozeRCType" value="TFNG" class="accent-orange-500"> <span class="text-sm">T/F/NG</span></label>
+          </div>
+        </div>
+        <div id="clozeRCChoiceBox">
+          <label class="block text-xs font-bold text-orange-700 mb-1">Choices per MCQ</label>
+          <div class="flex gap-3 flex-wrap">
+            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="clozeRCChoices" value="2" class="accent-orange-500"> <span class="text-sm">2</span></label>
+            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="clozeRCChoices" value="3" class="accent-orange-500"> <span class="text-sm">3</span></label>
+            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="clozeRCChoices" value="4" class="accent-orange-500" checked> <span class="text-sm font-semibold">4 (default)</span></label>
+            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="clozeRCChoices" value="5" class="accent-orange-500"> <span class="text-sm">5</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">
+        Temperature: <span id="tempVal" class="font-bold text-indigo-600">0.3</span>
+        <span class="text-xs text-gray-400">(0=precise · 1=creative)</span>
+      </label>
+      <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1 accent-indigo-600">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Additional Instructions (optional)</label>
+      <textarea id="extraInstr" rows="2"
+        placeholder="e.g., Bold key vocabulary. Include a tone question."
+        class="w-full p-2 border rounded-md mt-1 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+    </div>
+
+    <div id="errorBox" class="hidden p-3 bg-red-50 border border-red-300 text-red-700 rounded-lg text-sm"></div>
+
+    <button id="genBtn" class="w-full bg-indigo-600 text-white py-3 rounded-md font-semibold hover:bg-indigo-700 transition-all flex justify-center items-center gap-2">
+      <span>✨ Generate Quiz</span>
+      <div id="loader" class="loader hidden w-5 h-5 border-2 border-white rounded-full"></div>
+    </button>
+
+    <div id="setupGuide" class="hidden p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 space-y-2">
+      <p class="font-bold">🛠 Server Not Running — Quick Fix:</p>
+      <code class="block bg-white border rounded p-2 text-xs select-all">npm install express cors</code>
+      <code class="block bg-white border rounded p-2 text-xs select-all">node server.js</code>
+      <p class="text-xs text-gray-500">Then refresh this page.</p>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+  <div class="flex justify-between items-center mb-4 flex-wrap gap-2 no-print">
+    <h2 class="text-2xl font-bold text-gray-800">📝 Generated Quiz</h2>
+    <div id="actionBtns" style="display:none" class="flex gap-2 flex-wrap">
+      <button id="pdfBtn"      class="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-md font-semibold no-print">🖨 Print/PDF</button>
+      <button id="wordBtn"     class="text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md no-print font-semibold">📝 Word</button>
+      <button id="downloadBtn" class="text-sm bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1 rounded-md no-print">🎮 Interactive</button>
+      <button id="copyBtn"     class="text-sm bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-md no-print">📋 Copy</button>
+    </div>
+  </div>
+  <div id="wordBadge" style="display:none" class="mb-3">
+    <span id="wordBadgeText" class="text-xs px-3 py-1 rounded-full font-semibold"></span>
+  </div>
+  <div id="quizContent" class="quiz-scroll space-y-5 text-gray-700">
+    <div class="text-center text-gray-400 mt-20">
+      <div class="text-5xl mb-3">🤖</div>
+      <p>Your generated quiz will appear here...</p>
+      <p class="text-xs mt-2">Configure settings on the left, then click Generate Quiz.</p>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+const LOCAL_API  = 'http://localhost:3333/api/quiz';
+const HEALTH_API = 'http://localhost:3333/api/health';
+const SPEED_LEVELS = [
+    {id:'sen',label:'🐢 Very Slow',desc:'SEN / Very low ability',  rate:0.60,col:'red'},
+    {id:'low',label:'🐇 Slow',     desc:'Low / Less able',         rate:0.80,col:'orange'},
+    {id:'avg',label:'🚶 Average',  desc:'Average ability',         rate:0.95,col:'blue'},
+    {id:'adv',label:'🏃 Advanced', desc:'Advanced / Native speed', rate:1.10,col:'green'},
+];
+let _voices=[], _voicesLoaded=false, _activePanelId=null, _quizData=null, _quizType=null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('pdfBtn').addEventListener('click', exportPDF);
+    document.getElementById('wordBtn').addEventListener('click', exportWord);
+    document.getElementById('downloadBtn').addEventListener('click', exportInteractive);
+    document.getElementById('copyBtn').addEventListener('click', copyRaw);
+    document.getElementById('genBtn').addEventListener('click', generateQuiz);
+    document.getElementById('toggleKey').addEventListener('click', () => {
+        const f=document.getElementById('apiKey'); f.type=f.type==='password'?'text':'password';
+    });
+    document.getElementById('qType').addEventListener('change', syncFields);
+    document.getElementById('temperature').addEventListener('input', function(){
+        document.getElementById('tempVal').textContent=this.value;
+    });
+    document.getElementById('enableTTS').addEventListener('change', function(){
+        document.getElementById('ttsOptionsBox').style.display=this.checked?'block':'none';
+        if(this.checked){ syncTTSEngineUI(); syncPuterVoiceUI(); }
+    });
+    document.querySelectorAll('input[name="ttsEngine"]').forEach(r=>r.addEventListener('change', syncTTSEngineUI));
+    document.getElementById('rcWordMin').addEventListener('input',()=>syncRange('rcWordMin','rcWordMax','rcRangeDisplay'));
+    document.getElementById('rcWordMax').addEventListener('input',()=>syncRange('rcWordMin','rcWordMax','rcRangeDisplay'));
+    document.getElementById('clozeWordMin').addEventListener('input',()=>syncRange('clozeWordMin','clozeWordMax','clozeRangeDisplay'));
+    document.getElementById('clozeWordMax').addEventListener('input',()=>syncRange('clozeWordMin','clozeWordMax','clozeRangeDisplay'));
+    document.querySelectorAll('input[name="clozeAddRC"]').forEach(r=>r.addEventListener('change',()=>{
+        document.getElementById('clozeRCSubBox').style.display=
+            document.querySelector('input[name="clozeAddRC"]:checked').value==='yes'?'block':'none';
+    }));
+    document.querySelectorAll('input[name="clozeRCType"]').forEach(r=>r.addEventListener('change',()=>{
+        document.getElementById('clozeRCChoiceBox').style.display=
+            document.querySelector('input[name="clozeRCType"]:checked').value==='MCQ'?'block':'none';
+    }));
+    syncFields(); syncTTSEngineUI(); syncPuterVoiceUI(); initVoices();
+    checkServer();
+    setTimeout(checkServer,700); setTimeout(checkServer,2000);
+    setInterval(checkServer,8000);
+});
+
+/* ── HELPERS ── */
+function showError(m){const b=document.getElementById('errorBox');b.innerHTML='⚠ '+escHtml(m);b.classList.remove('hidden');}
+function hideError(){document.getElementById('errorBox').classList.add('hidden');}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function countWords(s){return s.trim().split(/\s+/).filter(w=>w.length>0).length;}
+function getRadio(n){const e=document.querySelector(`input[name="${n}"]:checked`);return e?e.value:null;}
+function syncRange(minId,maxId,dispId){
+    const mn=document.getElementById(minId).value||'?';
+    const mx=document.getElementById(maxId).value||'?';
+    document.getElementById(dispId).textContent=mn+'–'+mx+' words';
+}
+function parseBold(s){ return String(s||'').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>'); }
+function stripMd(s){ return String(s||'').replace(/\*\*([^*]+)\*\*/g,'$1'); }
+
+/* ── SERVER CHECK ── */
+async function checkServer(){
+    try{const r=await fetch(HEALTH_API,{cache:'no-store'});const d=await r.json();setStatus(d.status==='ok');}
+    catch(_){setStatus(false);}
+}
+function setStatus(on){
+    const dot=document.getElementById('statusDot'),txt=document.getElementById('statusText'),
+          box=document.getElementById('serverStatus'),guide=document.getElementById('setupGuide');
+    if(on){
+        dot.className='w-2.5 h-2.5 rounded-full bg-green-500';
+        txt.textContent='✅ Server is running — ready to generate!';
+        box.className='flex items-center gap-2 p-3 rounded-lg text-sm font-medium bg-green-50 text-green-700';
+        guide.classList.add('hidden');
+    }else{
+        dot.className='w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse';
+        txt.textContent='⚠ Server not detected — see fix guide below';
+        box.className='flex items-center gap-2 p-3 rounded-lg text-sm font-medium bg-red-50 text-red-700';
+        guide.classList.remove('hidden');
+    }
+}
+
+/* ── VOICES (browser) ── */
+function initVoices(){
+    if(!window.speechSynthesis)return;
+    populateVoices();
+    window.speechSynthesis.onvoiceschanged=populateVoices;
+    let att=0;const retry=setInterval(()=>{populateVoices();att++;if(_voicesLoaded||att>20)clearInterval(retry);},300);
+}
+function populateVoices(){
+    if(!window.speechSynthesis)return;
+    const all=window.speechSynthesis.getVoices();if(!all||!all.length)return;
+    let en=all.filter(v=>v.lang&&v.lang.toLowerCase().startsWith('en'));
+    if(!en.length)en=all;
+    en.sort((a,b)=>naturalScore(a)-naturalScore(b));
+    _voices=en;_voicesLoaded=true;
+    const sel=document.getElementById('ttsVoice');if(!sel)return;
+    sel.innerHTML='';
+    _voices.forEach((v,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`${v.name} [${v.lang}]${v.localService?' ★local':' (online)'}`;sel.appendChild(o);});
+}
+function naturalScore(v){const n=(v.name||'').toLowerCase();if(n.includes('google'))return 0;if(n.includes('microsoft')&&n.includes('neural'))return 1;if(n.includes('microsoft'))return 2;return 10;}
+function testVoice(){
+    if(!window.speechSynthesis){alert('No TTS support.');return;}
+    if(!_voicesLoaded)populateVoices();
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance('Audio is ready. Hello!');
+    const idx=parseInt(document.getElementById('ttsVoice').value)||0;
+    if(_voices[idx])u.voice=_voices[idx];u.rate=1;u.volume=0.5;
+    window.speechSynthesis.speak(u);
+    const btn=document.getElementById('testVoiceBtn');
+    btn.textContent='✅ Audio Unlocked!';btn.disabled=true;
+}
+
+/* ── TTS ENGINE SYNC ── */
+function syncTTSEngineUI(){
+    const engine=document.querySelector('input[name="ttsEngine"]:checked')?.value||'elevenlabs';
+    document.getElementById('elevenlabsBox').style.display=engine==='elevenlabs'?'block':'none';
+    document.getElementById('puterBox').style.display     =engine==='puter'     ?'block':'none';
+    document.getElementById('browserTtsBox').style.display=engine==='browser'   ?'block':'none';
+}
+function syncPuterVoiceUI(){
+    const p=document.getElementById('puterProvider')?.value||'polly';
+    document.getElementById('pollyVoiceBox').style.display =p==='polly' ?'block':'none';
+    document.getElementById('geminiVoiceBox').style.display=p==='gemini'?'block':'none';
+    document.getElementById('xaiVoiceBox').style.display   =p==='xai'   ?'block':'none';
+    document.getElementById('openaiVoiceBox').style.display=p==='openai'?'block':'none';
+}
+
+/* ── FIELD SYNC ── */
+function syncFields(){
+    const qt=document.getElementById('qType').value;
+    const isPassage=['Reading Comprehension','RC_TFNG','RC_Completion','Short Answer'].includes(qt);
+    document.getElementById('choiceBox').style.display=(qt==='MCQ'||qt==='Reading Comprehension')?'block':'none';
+    document.getElementById('rcWordCountBox').style.display=isPassage?'block':'none';
+    document.getElementById('clozeOptionsBox').style.display=qt==='Cloze'?'block':'none';
+    document.getElementById('rcCompletionBox').style.display=qt==='RC_Completion'?'block':'none';
+    document.getElementById('outcomeHint').style.display=['Reading Comprehension','RC_TFNG','RC_Completion','Short Answer','Cloze'].includes(qt)?'block':'none';
+}
+
+/* ── ANSWER REBALANCER ── */
+function rebalanceAnswers(questions, qType){
+    if(!questions||!questions.length)return questions;
+    const hasOptions=questions[0]&&questions[0].options&&questions[0].options.length>0;
+    if(!hasOptions)return questions;
+    const n=questions.length, nOpts=questions[0].options.length;
+    const labs=['A','B','C','D','E'];
+    const targetSeq=[];
+    for(let i=0;i<n;i++)targetSeq.push(labs[i%nOpts]);
+    for(let i=targetSeq.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[targetSeq[i],targetSeq[j]]=[targetSeq[j],targetSeq[i]];}
+    return questions.map((q,qi)=>{
+        if(!q.options||!q.options.length)return q;
+        const curAnsLetter=String(q.answer||'A')[0].toUpperCase();
+        const curIdx=labs.indexOf(curAnsLetter);
+        if(curIdx<0)return q;
+        const targetLetter=targetSeq[qi];
+        const targetIdx=labs.indexOf(targetLetter);
+        if(targetIdx<0||curIdx===targetIdx)return q;
+        const newOpts=[...q.options];
+        const correctOpt=newOpts.splice(curIdx,1)[0];
+        newOpts.splice(targetIdx,0,correctOpt);
+        const relabeled=newOpts.map((o,oi)=>{
+            const text=String(o).replace(/^[A-E]\.\s*/i,'');
+            return labs[oi]+'. '+text;
+        });
+        return {...q,options:relabeled,answer:targetLetter};
+    });
+}
+
+/* ── PROMPT BUILDER ── */
+function buildPrompt(){
+    const outcome=document.getElementById('outcome').value.trim();
+    const qType=document.getElementById('qType').value;
+    const qCount=document.getElementById('qCount').value;
+    const cefr=document.getElementById('cefrLevel').value;
+    const diff=document.getElementById('diffLevel')?.value||'Medium';
+    const extra=document.getElementById('extraInstr').value.trim();
+    const choices=getRadio('choiceCount')||'4';
+    const rcMin=parseInt(document.getElementById('rcWordMin').value)||200;
+    const rcMax=parseInt(document.getElementById('rcWordMax').value)||250;
+    const safeRCMin=Math.min(rcMin,rcMax),safeRCMax=Math.max(rcMin,rcMax);
+    const rcMid=Math.round((safeRCMin+safeRCMax)/2);
+    const czMin=parseInt(document.getElementById('clozeWordMin').value)||150;
+    const czMax=parseInt(document.getElementById('clozeWordMax').value)||200;
+    const safeCZMin=Math.min(czMin,czMax),safeCZMax=Math.max(czMin,czMax);
+    const czMid=Math.round((safeCZMin+safeCZMax)/2);
+    const comp1=parseInt(document.getElementById('rcComp1')?.value||'3');
+    const comp2=parseInt(document.getElementById('rcComp2')?.value||'2');
+    const comp3=parseInt(document.getElementById('rcComp3')?.value||'1');
+    const addClozeRC=getRadio('clozeAddRC')==='yes';
+    const clozeRCCount=document.getElementById('clozeRCCount').value||'4';
+    const clozeRCType=getRadio('clozeRCType')||'MCQ';
+    const clozeRCChoices=getRadio('clozeRCChoices')||'4';
+    const L=['A','B','C','D','E'];
+    const optL=L.slice(0,parseInt(choices));
+    const optTpl=optL.map(l=>`"${l}. ..."`).join(', ');
+    const rcL=L.slice(0,parseInt(clozeRCChoices));
+    const rcTpl=rcL.map(l=>`"${l}. ..."`).join(', ');
+    const buildTargetSeq=(n,nOpts)=>{
+        const seq=[];for(let i=0;i<n;i++)seq.push(L[i%nOpts]);
+        for(let i=seq.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[seq[i],seq[j]]=[seq[j],seq[i]];}
+        return seq.join('');
+    };
+    const nq=parseInt(qCount)||5, no=parseInt(choices)||4;
+    const answerSeq=buildTargetSeq(nq,no);
+    const wcBlock=(mn,mx,mid)=>`══════════════════════\nWORD COUNT — NON-NEGOTIABLE\nMin:${mn} Max:${mx} Target:~${mid}\nCount every word. Rewrite if outside range.\n══════════════════════`;
+    const boldRule=`BOLD TEXT: Wrap key vocabulary like **word** in passage text.`;
+    const balanceRule=`ANSWER DISTRIBUTION (CRITICAL): Correct answers MUST follow this exact sequence: ${answerSeq}\nQ1=${answerSeq[0]}, Q2=${answerSeq[1]}, Q3=${answerSeq[2]} etc. Place correct option at that letter. Adjust distractors around it.`;
+    const rcSec=addClozeRC?`\nSECTION B: Write ${clozeRCCount} ${clozeRCType==='TFNG'?'T/F/NG':'MCQ'} questions.\n${clozeRCType==='MCQ'?`Each has ${rcL.length} options. Format:{"question":"...","options":[${rcTpl}],"answer":"A","explanation":"..."}`:`TRUE=supported.FALSE=contradicts.NOT GIVEN=neither. Format:{"question":"...","answer":"True","explanation":"..."}`}`:'';
+    const prompts={
+'MCQ':`${balanceRule}\nCreate ${nq} MCQ questions at CEFR ${cefr}, difficulty ${diff}, topic:${outcome}.\nEach has exactly ${choices} options (${optL.join(',')}).\n${extra?'Extra:'+extra:''}\nReturn JSON array ONLY:\n[{"question":"...","options":[${optTpl}],"answer":"A","explanation":"..."}]`,
+'True/False':`Create ${nq} True/False questions at CEFR ${cefr}, difficulty ${diff}, topic:${outcome}.\nDistribute True and False roughly equally.\n${extra?'Extra:'+extra:''}\nReturn JSON array:\n[{"question":"...","answer":"True","explanation":"..."}]`,
+'Matching':`Create ${nq} matching pairs at CEFR ${cefr}, difficulty ${diff}, topic:${outcome}.\n${extra?'Extra:'+extra:''}\nReturn JSON array:\n[{"left":"term","right":"definition"}]`,
+'Short Answer':`${wcBlock(safeRCMin,safeRCMax,rcMid)}\n${boldRule}\nSTEP 1: Write passage (${safeRCMin}–${safeRCMax} words) at CEFR ${cefr}, difficulty ${diff}. Topic:${outcome}\nSTEP 2: Count words. Rewrite if outside range.\nSTEP 3: Write ${nq} short-answer questions.\n${extra?'Extra:'+extra:''}\nSTEP 4: Return ONLY JSON:\n{"passage":"...","wordCount":N,"questions":[{"question":"...","answer":"model answer","explanation":"..."}]}`,
+'Reading Comprehension':`${wcBlock(safeRCMin,safeRCMax,rcMid)}\n${boldRule}\n${balanceRule}\nSTEP 1: Write passage (${safeRCMin}–${safeRCMax} words) CEFR ${cefr}, difficulty ${diff}. Topic:${outcome}\nSTEP 2: Count. Rewrite if outside range.\nSTEP 3: Write ${nq} MCQs with ${choices} options (${optL.join(',')}).\nCRITICAL sequence:${answerSeq}\n${extra?'Extra:'+extra:''}\nSTEP 4: Return ONLY:\n{"passage":"...","wordCount":N,"questions":[{"question":"...","options":[${optTpl}],"answer":"A","explanation":"..."}]}`,
+'RC_TFNG':`${wcBlock(safeRCMin,safeRCMax,rcMid)}\n${boldRule}\nSTEP 1: Write passage (${safeRCMin}–${safeRCMax} words) CEFR ${cefr}, difficulty ${diff}. Topic:${outcome}\nSTEP 2: Count. Rewrite if outside.\nSTEP 3: Write ${nq} T/F/NG questions. Distribute True/False/Not Given roughly equally.\n${extra?'Extra:'+extra:''}\nSTEP 4: Return ONLY:\n{"passage":"...","wordCount":N,"questions":[{"question":"...","answer":"True","explanation":"..."}]}`,
+'RC_Completion':`${wcBlock(safeRCMin,safeRCMax,rcMid)}\n${boldRule}\nSTEP 1: Write passage (${safeRCMin}–${safeRCMax} words) CEFR ${cefr}, difficulty ${diff}. Topic:${outcome}\nSTEP 2: Count. Rewrite if outside.\nSTEP 3: Create completion questions from passage text:\n- ${comp1} questions: ONE WORD ONLY — include "(ONE WORD ONLY)" in question\n- ${comp2} questions: TWO WORDS ONLY — include "(TWO WORDS ONLY)" in question\n- ${comp3} questions: THREE WORDS ONLY — include "(THREE WORDS ONLY)" in question\n${extra?'Extra:'+extra:''}\nSTEP 4: Return ONLY:\n{"passage":"...","wordCount":N,"questions":[{"question":"The river flows through... (ONE WORD ONLY)","answer":"Egypt","maxWords":1,"explanation":"..."}]}`,
+'Cloze':`${wcBlock(safeCZMin,safeCZMax,czMid)}\n${boldRule}\nSTEP 1: Write cloze passage (${safeCZMin}–${safeCZMax} words) CEFR ${cefr}, difficulty ${diff}. Topic:${outcome}\nChoose ${nq} words as blanks. Replace each with .....(1)....., .....(2)....., etc.\n${extra?'Extra:'+extra:''}\nSTEP 2: Write one MCQ per blank with 4 options A/B/C/D.\nSTEP 3: Count. Rewrite if outside ${safeCZMin}–${safeCZMax}.\n${rcSec}\nSTEP 4: Return ONLY:\n{"passage":"...","wordCount":N,"blanks":[{"number":1,"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A","explanation":"..."}]${addClozeRC?`,"rcQuestions":[...]`:''}}`
+    };
+    const task=prompts[qType]||prompts['MCQ'];
+    return `You are an expert English teacher creating a quiz.\nRULES:\n1. Return raw JSON ONLY — no markdown, no code fences.\n2. Vocabulary must match CEFR ${cefr}.\n3. JSON must be valid.\n${['Reading Comprehension','RC_TFNG','RC_Completion','Short Answer'].includes(qType)?`4. PASSAGE=${safeRCMin}–${safeRCMax} WORDS. NON-NEGOTIABLE.\n`:''}${qType==='Cloze'?`4. CLOZE=${safeCZMin}–${safeCZMax} WORDS. NON-NEGOTIABLE.\n`:''}\nTASK:\n${task}`;
+}
+
+/* ── GENERATE ── */
+async function generateQuiz(){
+    hideError(); stopAllSpeech();
+    document.getElementById('wordBadge').style.display='none';
+    const apiKey=document.getElementById('apiKey').value.trim();
+    const outcome=document.getElementById('outcome').value.trim();
+    if(!apiKey)return showError('Enter your SambaNova API key.');
+    if(!outcome)return showError('Enter a learning outcome or topic.');
+    const qType=document.getElementById('qType').value;
+    const isPassage=['Reading Comprehension','RC_TFNG','RC_Completion','Short Answer'].includes(qType);
+    const isCloze=qType==='Cloze';
+    const btn=document.getElementById('genBtn'),loader=document.getElementById('loader'),qc=document.getElementById('quizContent');
+    btn.disabled=true;loader.classList.remove('hidden');
+    document.getElementById('actionBtns').style.display='none';
+    qc.innerHTML='<p class="text-center text-gray-500 mt-20 animate-pulse">🤖 AI is generating your quiz...</p>';
+    const model=document.getElementById('modelSelect').value;
+    const temperature=parseFloat(document.getElementById('temperature').value)||0.3;
+    try{
+        const resp=await fetch(LOCAL_API,{
+            method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey},
+            body:JSON.stringify({model,messages:[
+                {role:'system',content:'You are a CEFR-aligned English quiz designer. Return raw JSON only. No markdown, no code fences.'},
+                {role:'user',content:buildPrompt()}
+            ],temperature,max_tokens:(isPassage||isCloze)?5500:3000,stream:false})
+        });
+        const txt=await resp.text();
+        if(!resp.ok){let m='API Error '+resp.status;try{m=JSON.parse(txt).error?.message||m;}catch(_){}throw new Error(m);}
+        let raw=JSON.parse(txt).choices?.[0]?.message?.content||'';
+        if(!raw.trim())throw new Error('Empty response.');
+        window._lastRawText=raw;
+        raw=raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/i,'').trim();
+        const s0=raw.search(/[\[{]/);if(s0===-1)throw new Error('No JSON found.');
+        raw=raw.slice(s0);
+        const ec=raw[0]==='['?']':'}';const e0=raw.lastIndexOf(ec);if(e0===-1)throw new Error('Incomplete JSON.');
+        raw=raw.slice(0,e0+1);
+        let quiz=JSON.parse(raw);
+        if(quiz.questions)quiz.questions=rebalanceAnswers(quiz.questions,qType);
+        else if(quiz.blanks)quiz.blanks=rebalanceAnswers(quiz.blanks,qType);
+        else if(Array.isArray(quiz))quiz=rebalanceAnswers(quiz,qType);
+        _quizData=quiz;_quizType=qType;
+        if((isPassage||isCloze)&&quiz.passage){
+            const clean=quiz.passage.replace(/\*\*([^*]+)\*\*/g,' $1 ').replace(/\.{3,}\(\d+\)\.{3,}/g,' ');
+            const act=countWords(clean);
+            const mn=parseInt(isPassage?document.getElementById('rcWordMin').value:document.getElementById('clozeWordMin').value);
+            const mx=parseInt(isPassage?document.getElementById('rcWordMax').value:document.getElementById('clozeWordMax').value);
+            const badge=document.getElementById('wordBadge'),bt=document.getElementById('wordBadgeText');
+            badge.style.display='block';
+            const ok=act>=mn&&act<=mx,close=act>=mn-20&&act<=mx+20;
+            bt.textContent=ok?`✅ ${act} words (${mn}–${mx}) — perfect!`:close?`🟡 ${act} words — slightly off`:`⚠ ${act} words — try regenerating`;
+            bt.className=`text-xs px-3 py-1 rounded-full font-semibold ${ok?'bg-green-100 text-green-700':close?'bg-amber-100 text-amber-700':'bg-red-100 text-red-700'}`;
+        }
+        renderQuiz(quiz,qType);
+        document.getElementById('actionBtns').style.display='flex';
+    }catch(err){
+        let m=err.message||'Unknown error.';
+        if(m.toLowerCase().includes('failed to fetch')||m.toLowerCase().includes('networkerror'))
+            m='❌ Cannot reach server. Run "node server.js" first.';
+        showError(m);
+        qc.innerHTML='<div class="text-center text-red-400 mt-10"><div class="text-4xl">⚠️</div><p class="mt-2">Generation failed.</p></div>';
+    }finally{btn.disabled=false;loader.classList.add('hidden');}
+}
+
+/* ═══════════════════════════════
+   TTS ENGINES
+═══════════════════════════════ */
+
+function speakPassage(textKey, rate, panelId){
+    const text=window[textKey];
+    if(!text){alert('No passage text found. Regenerate the quiz.');return;}
+    const engine=document.querySelector('input[name="ttsEngine"]:checked')?.value||'elevenlabs';
+    if(engine==='elevenlabs'){speakElevenLabs(text,rate,panelId);return;}
+    if(engine==='puter'){speakPuter(text,rate,panelId);return;}
+    speakBrowser(text,rate,panelId);
+}
+
+/* ELEVENLABS */
+async function speakElevenLabs(text, rate, panelId){
+    const apiKey=document.getElementById('elevenApiKey')?.value.trim();
+    const voiceId=document.getElementById('elevenVoiceId')?.value||'21m00Tcm4TlvDq8ikWAM';
+    const panel=document.getElementById(panelId);
+    const playBtn=panel?panel.querySelector('.play-btn'):null;
+    if(!apiKey){alert('Enter your ElevenLabs API key first.');return;}
+    if(window._elAudio&&!window._elAudio.paused){
+        window._elAudio.pause();window._elAudio=null;
+        if(playBtn){playBtn.textContent='▶ Play';playBtn.classList.remove('is-speaking');playBtn.disabled=false;}
+        return;
+    }
+    if(playBtn){playBtn.textContent='⏳ Loading...';playBtn.disabled=true;}
+    try{
+        const resp=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json','xi-api-key':apiKey},
+            body:JSON.stringify({text,model_id:'eleven_multilingual_v2',
+                voice_settings:{stability:0.5,similarity_boost:0.75,style:0.2,use_speaker_boost:true}})
+        });
+        if(!resp.ok)throw new Error('ElevenLabs error: '+resp.status);
+        const blob=await resp.blob();
+        const audio=new Audio(URL.createObjectURL(blob));
+        audio.playbackRate=rate;
+        window._elAudio=audio;
+        if(playBtn){playBtn.textContent='⏹ Stop';playBtn.disabled=false;playBtn.classList.add('is-speaking');}
+        audio.onended=()=>{window._elAudio=null;if(playBtn){playBtn.textContent='▶ Play';playBtn.classList.remove('is-speaking');}};
+        audio.play();
+    }catch(e){
+        if(playBtn){playBtn.textContent='▶ Play';playBtn.disabled=false;}
+        alert('ElevenLabs failed: '+e.message);
+    }
+}
+
+/* PUTER.JS */
+async function speakPuter(text, rate, panelId){
+    const panel=document.getElementById(panelId);
+    const playBtn=panel?panel.querySelector('.play-btn'):null;
+    if(window._puterAudio&&!window._puterAudio.paused){
+        window._puterAudio.pause();window._puterAudio=null;
+        if(playBtn){playBtn.textContent='▶ Play';playBtn.classList.remove('is-speaking');playBtn.disabled=false;}
+        return;
+    }
+    if(playBtn){playBtn.textContent='⏳ Loading...';playBtn.disabled=true;}
+    const provider=document.getElementById('puterProvider')?.value||'polly';
+    try{
+        let audio;
+        if(provider==='gemini'){
+            const voice=document.getElementById('geminiVoice')?.value||'Puck';
+            audio=await puter.ai.txt2speech(text,{provider:'gemini',model:'gemini-2.5-flash-preview-tts',voice,
+                instructions:'Speak clearly at a measured pace suitable for English language learners.'});
+        }else if(provider==='xai'){
+            const voice=document.getElementById('xaiVoice')?.value||'ara';
+            audio=await puter.ai.txt2speech(text,{provider:'xai',voice});
+        }else if(provider==='openai'){
+            const voice=document.getElementById('openaiVoice')?.value||'nova';
+            audio=await puter.ai.txt2speech(text,{provider:'openai',voice});
+        }else{
+            const voice=document.getElementById('pollyVoice')?.value||'Joanna';
+            audio=await puter.ai.txt2speech(text,{voice,engine:'neural',language:'en-US'});
+        }
+        audio.playbackRate=rate;
+        window._puterAudio=audio;
+        if(playBtn){playBtn.textContent='⏹ Stop';playBtn.disabled=false;playBtn.classList.add('is-speaking');}
+        audio.onended=()=>{window._puterAudio=null;if(playBtn){playBtn.textContent='▶ Play';playBtn.classList.remove('is-speaking');}};
+        audio.play();
+    }catch(e){
+        if(playBtn){playBtn.textContent='▶ Play';playBtn.disabled=false;}
+        alert('Puter TTS error: '+e.message+'\n\nTip: Sign in at puter.com first if prompted.');
+    }
+}
+
+/* BROWSER */
+function speakBrowser(text, rate, panelId){
+    if(!window.speechSynthesis){alert('No TTS support in this browser.');return;}
+    const panel=document.getElementById(panelId);
+    const playBtn=panel?panel.querySelector('.play-btn'):null;
+    if(_activePanelId===panelId&&window.speechSynthesis.speaking){
+        window.speechSynthesis.cancel();_activePanelId=null;
+        clearWordHighlights();resetAllPlayButtons();return;
+    }
+    window.speechSynthesis.cancel();clearWordHighlights();resetAllPlayButtons();
+    _activePanelId=panelId;
+    const idx=parseInt(document.getElementById('ttsVoice').value)||0;
+    const voice=_voices[idx]||null;
+    const utter=new SpeechSynthesisUtterance(text);
+    if(voice)utter.voice=voice;
+    utter.rate=rate;utter.pitch=1;utter.volume=1;
+    const wordEls=panel?panel.querySelectorAll('.tts-word'):[];
+    let wi=0;
+    utter.onboundary=e=>{
+        if(e.name!=='word')return;
+        wordEls.forEach(el=>el.classList.remove('active'));
+        if(wi<wordEls.length)wordEls[wi].classList.add('active');
+        const prog=document.getElementById(panelId+'_prog');
+        if(prog&&wordEls.length)prog.style.width=((wi/wordEls.length)*100)+'%';
+        wi++;
+    };
+    utter.onstart=()=>{if(playBtn){playBtn.textContent='⏹ Stop';playBtn.classList.add('is-speaking');}};
+    const onDone=()=>{
+        _activePanelId=null;
+        if(playBtn){playBtn.textContent='▶ Play';playBtn.classList.remove('is-speaking');}
+        wordEls.forEach(el=>el.classList.remove('active'));
+        const prog=document.getElementById(panelId+'_prog');
+        if(prog){prog.style.width='100%';setTimeout(()=>prog.style.width='0%',1200);}
+    };
+    utter.onend=utter.onerror=onDone;
+    setTimeout(()=>{window.speechSynthesis.cancel();window.speechSynthesis.speak(utter);},0);
+}
+
+function stopAllSpeech(){
+    if(window.speechSynthesis)window.speechSynthesis.cancel();
+    if(window._elAudio){try{window._elAudio.pause();}catch(e){}window._elAudio=null;}
+    if(window._puterAudio){try{window._puterAudio.pause();}catch(e){}window._puterAudio=null;}
+    _activePanelId=null;
+    clearWordHighlights();resetAllPlayButtons();
+}
+function clearWordHighlights(){document.querySelectorAll('.tts-word.active').forEach(el=>el.classList.remove('active'));}
+function resetAllPlayButtons(){
+    document.querySelectorAll('.play-btn').forEach(btn=>{btn.textContent='▶ Play';btn.classList.remove('is-speaking');btn.disabled=false;});
+    document.querySelectorAll('[id$="_prog"]').forEach(p=>p.style.width='0%');
+}
+
+/* ── BUILD TTS PANEL ── */
+function buildTTSPanel(passage, uid){
+    if(!document.getElementById('enableTTS').checked)return'';
+    const plainPassage=stripMd(passage);
+    window['ttsPassage_'+uid]=plainPassage;
+    const safeKey='ttsPassage_'+uid;
+    const spanned=parseBold(passage).split(/(\s+)/).map(chunk=>
+        /\S/.test(chunk)?`<span class="tts-word">${escHtml(chunk)}</span>`:escHtml(chunk)).join('');
+    const colMap={
+        red:   {bg:'bg-red-500 hover:bg-red-600',    bdr:'border-red-200',    txt:'text-red-700',    bar:'bg-red-400'},
+        orange:{bg:'bg-orange-500 hover:bg-orange-600',bdr:'border-orange-200',txt:'text-orange-700',  bar:'bg-orange-400'},
+        blue:  {bg:'bg-blue-500 hover:bg-blue-600',   bdr:'border-blue-200',   txt:'text-blue-700',   bar:'bg-blue-400'},
+        green: {bg:'bg-green-500 hover:bg-green-600', bdr:'border-green-200',  txt:'text-green-700',  bar:'bg-green-400'},
+    };
+    let cards='';
+    SPEED_LEVELS.forEach(s=>{
+        const pid=`tts_${uid}_${s.id}`;const c=colMap[s.col];
+        cards+=`<div id="${pid}" class="tts-panel bg-white border-2 ${c.bdr} rounded-xl p-3">
+            <div class="flex items-center justify-between mb-2">
+                <div><div class="font-bold ${c.txt} text-sm">${s.label}</div>
+                <div class="text-xs text-gray-400">${s.desc} · ${s.rate}×</div></div>
+                <button class="play-btn tts-btn ${c.bg} text-white text-xs px-4 py-2 rounded-lg font-bold"
+                    onclick="speakPassage('${safeKey}',${s.rate},'${pid}')">▶ Play</button>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-1.5">
+                <div id="${pid}_prog" class="${c.bar} h-1.5 rounded-full transition-all duration-150" style="width:0%"></div>
+            </div></div>`;
+    });
+    return `<div class="mt-4 pt-4 border-t-2 border-green-200 px-4 pb-4">
+        <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2"><span class="text-green-600 text-lg">🎧</span>
+            <span class="font-bold text-green-700 text-sm">Listening Comprehension</span></div>
+            <button onclick="stopAllSpeech()" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg text-gray-600 font-medium">⏹ Stop All</button>
+        </div>
+        <details class="mb-3 bg-yellow-50 border border-yellow-200 rounded-lg overflow-hidden">
+            <summary class="px-3 py-2 text-xs text-yellow-700 font-semibold cursor-pointer hover:bg-yellow-100 select-none">
+                👁 Teacher View — Show/Hide passage text</summary>
+            <div class="px-4 py-3 text-sm leading-relaxed italic text-gray-700">${spanned}</div>
+        </details>
+        <div class="grid grid-cols-2 gap-3">${cards}</div>
+        <p class="text-xs text-gray-400 text-center mt-2">💡 ElevenLabs/Puter = AI voice. Browser = highlights words as spoken.</p>
+    </div>`;
+}
+        text-gray-400 text-sm">${i+1}.</span>
+            <span class="flex-1 font-medium text-gray-800">${parseBold(escHtml(it.left||''))}</span>
+            <span class="text-indigo-400 font-bold">→</span>
+            <span class="flex-1 text-indigo-700 italic">${parseBold(escHtml(it.right||''))}</span>
+        </div>`).join('');
+    c.insertAdjacentHTML('beforeend',
+        `<div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex justify-between mb-3">
+                <span class="font-bold text-gray-800">Matching Exercise</span>
+                <span class="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">Matching</span>
+            </div>${rows}</div>`);
+}
+
+/* ── INLINE EDIT / DELETE ── */
+function editQuestion(idx, type){
+    if(!_quizData)return;
+    const arr=type==='cloze'?(_quizData.blanks||[]):(Array.isArray(_quizData)?_quizData:(_quizData.questions||[]));
+    const item=arr[idx];if(!item)return;
+    const cardId=type==='cloze'?'qcard_cloze_'+idx:'qcard_'+idx;
+    const card=document.getElementById(cardId);
+    if(!card||card.dataset.editing==='1')return;
+    card.dataset.editing='1';
+    const opts=item.options||[];
+    let html=`<div class="space-y-3 p-1">
+        <div><label class="block text-xs font-bold text-gray-600 mb-1">✏️ Question</label>
+        <textarea id="eq_${idx}" class="w-full border-2 border-amber-300 rounded-lg p-2 text-sm" rows="3">${escHtml(item.question||item.title||'')}</textarea></div>`;
+    if(opts.length){
+        html+=`<div><label class="block text-xs font-bold text-gray-600 mb-1">🔤 Choices</label><div class="space-y-1">`;
+        opts.forEach((o,oi)=>{html+=`<input id="eo_${idx}_${oi}" class="w-full border border-amber-200 rounded p-2 text-sm" value="${escHtml(o)}">`});
+        html+=`</div></div>`;
+    }
+    html+=`<div class="grid grid-cols-2 gap-2">
+        <div><label class="block text-xs font-bold text-gray-600 mb-1">✅ Answer</label>
+        <input id="ea_${idx}" class="w-full border border-amber-200 rounded p-2 text-sm" value="${escHtml(item.answer||'')}"></div>
+        <div><label class="block text-xs font-bold text-gray-600 mb-1">💡 Explanation</label>
+        <input id="ee_${idx}" class="w-full border border-amber-200 rounded p-2 text-sm" value="${escHtml(item.explanation||'')}"></div>
+        </div>
+        <div class="flex gap-2 pt-1">
+            <button onclick="saveEdit(${idx},'${type||''}')" class="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1.5 rounded font-semibold">💾 Save</button>
+            <button onclick="renderQuiz(_quizData,_quizType)" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded font-semibold">✖ Cancel</button>
+        </div></div>`;
+    card.innerHTML=html;
+}
+
+function saveEdit(idx, type){
+    if(!_quizData)return;
+    const arr=type==='cloze'?(_quizData.blanks||[]):(Array.isArray(_quizData)?_quizData:(_quizData.questions||[]));
+    const item=arr[idx];if(!item)return;
+    const qEl=document.getElementById('eq_'+idx);
+    const ansEl=document.getElementById('ea_'+idx);
+    const expEl=document.getElementById('ee_'+idx);
+    if(qEl){if(item.question!==undefined)item.question=qEl.value;if(item.title!==undefined)item.title=qEl.value;}
+    if(ansEl&&item.answer!==undefined)item.answer=ansEl.value;
+    if(expEl)item.explanation=expEl.value;
+    if(item.options)item.options=item.options.map((_,oi)=>{const el=document.getElementById('eo_'+idx+'_'+oi);return el?el.value:item.options[oi];});
+    renderQuiz(_quizData,_quizType);
+}
+
+function deleteQuestion(idx, type){
+    if(!confirm('Delete Q'+(idx+1)+'? Cannot be undone.'))return;
+    if(!_quizData)return;
+    if(type==='cloze'){if(_quizData.blanks)_quizData.blanks.splice(idx,1);}
+    else if(Array.isArray(_quizData)){_quizData.splice(idx,1);}
+    else if(_quizData.questions){_quizData.questions.splice(idx,1);}
+    renderQuiz(_quizData,_quizType);
+}
+
+/* ══════════════════════════════════════════
+   EXPORTS
+══════════════════════════════════════════ */
+function buildTeacherHTML(){
+    const data=_quizData,qt=_quizType;
+    if(!data)return'';
+    const questions=Array.isArray(data)?data:(data.questions||data.blanks||[]);
+    let body='';
+    if(data.passage){
+        const clean=stripMd(data.passage);
+        body+=`<h2 style="color:#92400e;font-family:Georgia,serif;border-bottom:2px solid #fbbf24;padding-bottom:4px;margin-top:20px;">Reading Passage</h2>
+        <p style="font-family:Georgia,serif;font-size:12pt;line-height:1.9;border-left:4px solid #fbbf24;padding:12px 16px;background:#fffbeb;">${clean.replace(/\n/g,'<br>')}</p>
+        <hr style="margin:20px 0;">`;
+    }
+    body+='<h2 style="color:#4338ca;font-family:Calibri,sans-serif;margin-bottom:12px;">Questions</h2>';
+    questions.forEach((q,i)=>{
+        const qText=stripMd(q.question||q.title||'');
+        body+=`<p style="font-family:Calibri,sans-serif;font-size:12pt;margin-top:18px;"><b>Q${i+1}.</b> ${qText}</p>`;
+        if(q.maxWords){
+            body+=`<p style="font-family:Calibri;font-size:10pt;margin-left:24px;color:#6d28d9;font-style:italic;">(${q.maxWords===1?'ONE WORD ONLY':q.maxWords===2?'TWO WORDS ONLY':'THREE WORDS ONLY'})</p>`;
+        }
+        if(q.options&&q.options.length){
+            const labs=['A','B','C','D','E'];
+            q.options.forEach((opt,oi)=>{
+                const optText=stripMd(String(opt).replace(/^[A-E]\.\s*/i,''));
+                body+=`<p style="font-family:Calibri,sans-serif;font-size:11pt;margin-left:24px;">${labs[oi]}. ${optText}</p>`;
+            });
+        }
+        if(q.explanation){
+            body+=`<p style="font-family:Calibri;font-size:10pt;margin-left:24px;color:#1d4ed8;font-style:italic;">💡 ${stripMd(q.explanation)}</p>`;
+        }
+    });
+    if(questions.length){
+        body+=`<hr style="margin:28px 0;"><h3 style="color:#4338ca;font-family:Calibri;margin-bottom:10px;">Answer Key</h3>
+        <table style="border-collapse:collapse;font-family:Calibri;font-size:11pt;"><tr>`;
+        questions.forEach((q,i)=>{
+            let ans=String(q.answer||'?');
+            if(q.options&&q.options.length)ans=ans[0]?.toUpperCase()||'?';
+            else if(ans.length>20)ans=ans.substring(0,20)+'…';
+            body+=`<td style="border:1px solid #c7d2fe;padding:5px 12px;background:#eef2ff;font-weight:bold;text-align:center;min-width:48px;"><b>Q${i+1}</b><br>${escHtml(ans)}</td>`;
+            if((i+1)%10===0&&i+1<questions.length)body+='</tr><tr>';
+        });
+        body+='</tr></table>';
+    }
+    return`<html xmlns:o="urn:schemas-microsoft-com:office:office"
+        xmlns:w="urn:schemas-microsoft-com:office:word"
+        xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta charset="UTF-8">
+    <style>body{font-family:Calibri,sans-serif;margin:2cm;font-size:12pt;line-height:1.6;}
+    table{max-width:100%;border-collapse:collapse;}h1,h2,h3{font-family:Calibri,sans-serif;}
+    @media print{body{margin:1.5cm;}}</style></head>
+    <body>
+    <h1 style="text-align:center;color:#312e81;border-bottom:2px solid #4338ca;padding-bottom:10px;margin-bottom:20px;">AI Generated Quiz</h1>
+    ${body}
+    </body></html>`;
+}
+
+function exportPDF(){
+    if(!_quizData){alert('Generate a quiz first.');return;}
+    const w=window.open('','_blank');
+    w.document.open();w.document.write(buildTeacherHTML());w.document.close();
+    setTimeout(()=>{w.focus();w.print();},600);
+}
+
+function exportWord(){
+    if(!_quizData){alert('Generate a quiz first.');return;}
+    const blob=new Blob(['\ufeff'+buildTeacherHTML()],{type:'application/msword'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download='quiz-teacher.doc';a.click();
+}
+
+async function copyRaw(){
+    if(!_quizData){alert('Generate a quiz first.');return;}
+    const txt=buildTeacherHTML();
+    try{
+        await navigator.clipboard.writeText(txt);
+        alert('✅ Copied! Paste into Word or any text editor.');
+    }catch(e){
+        const ta=document.createElement('textarea');
+        ta.value=txt;document.body.appendChild(ta);ta.select();
+        document.execCommand('copy');ta.remove();
+        alert('✅ Copied!');
+    }
+}
+
+function exportInteractive(){
+    if(!_quizData){alert('Generate a quiz first.');return;}
+    const data=_quizData,qt=_quizType;
+    const allQuestions=Array.isArray(data)?data:(data.questions||data.blanks||[]);
+    const passage=data.passage||'';
+    const labs=['A','B','C','D','E'];
+    const QS_DATA=[];
+    allQuestions.forEach((q,i)=>{
+        const hasOpts=q.options&&q.options.length>0;
+        let opts,correctIndex,type;
+        if(hasOpts){
+            opts=q.options.map(o=>stripMd(String(o).replace(/^[A-E]\.\s*/i,'')));
+            const ansLetter=String(q.answer||'')[0]?.toUpperCase()||'A';
+            correctIndex=labs.indexOf(ansLetter);if(correctIndex<0)correctIndex=0;
+            type='mcq';
+        }else if(qt==='RC_TFNG'){
+            opts=['True','False','Not Given'];
+            const al=String(q.answer||'').toLowerCase();
+            correctIndex=al==='true'?0:al==='false'?1:2;type='tfng';
+        }else if(qt==='True/False'){
+            opts=['True','False'];
+            correctIndex=String(q.answer||'').toLowerCase().startsWith('t')?0:1;type='tf';
+        }else{
+            opts=[];correctIndex=-1;type='short';
+        }
+        QS_DATA.push({num:i+1,question:stripMd(q.question||q.title||''),opts,correctIndex,
+            explanation:stripMd(q.explanation||''),answer:stripMd(String(q.answer||'')),
+            maxWords:q.maxWords||0,type});
+    });
+    if(!QS_DATA.length){alert('No questions to export.');return;}
+    const passageHTML=passage
+        ?`<div style="background:#fffbeb;border-left:5px solid #fbbf24;padding:18px 20px;margin-bottom:28px;border-radius:8px;font-size:13pt;line-height:1.9;font-style:italic;color:#374151;">${stripMd(passage).replace(/\n/g,'<br>')}</div>`
+        :'';
+    const qHTML=QS_DATA.map((q,qi)=>{
+        if(q.type==='short'){
+            const wl=q.maxWords>0?` <span style="color:#6d28d9;font-size:.8rem;font-style:italic;">(${q.maxWords===1?'ONE WORD ONLY':q.maxWords===2?'TWO WORDS ONLY':'THREE WORDS ONLY'})</span>`:'';
+            return`<div class="qcard" id="qcard_${qi}" style="background:#fff;border:2px solid #e5e7eb;border-radius:14px;padding:20px;margin-bottom:16px;">
+                <div style="font-size:.8rem;font-weight:700;color:#6366f1;margin-bottom:6px;">Question ${q.num}</div>
+                <div style="font-weight:600;color:#1f2937;margin-bottom:14px;line-height:1.6;">${escHtml(q.question)}${wl}</div>
+                <input type="text" id="sa_${qi}" placeholder="Type your answer here…"
+                    style="width:100%;padding:10px 14px;border:2px solid #e5e7eb;border-radius:8px;font-size:11pt;outline:none;font-family:inherit;box-sizing:border-box;"
+                    onkeydown="if(event.key==='Enter')checkShort(${qi})">
+                <button onclick="checkShort(${qi})"
+                    style="margin-top:10px;background:#6366f1;color:#fff;border:none;padding:9px 22px;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;">
+                    ✅ Check Answer
+                </button>
+                <div id="fb_${qi}" style="display:none;margin-top:10px;padding:10px 14px;border-radius:8px;font-size:.9rem;"></div>
+            </div>`;
+        }
+        const optsHTML=q.opts.map((opt,oi)=>
+            `<div class="opt" data-qi="${qi}" data-oi="${oi}"
+                onclick="selectOpt(this,${qi},${oi},${q.correctIndex})"
+                style="cursor:pointer;padding:11px 16px;margin:6px 0;border:2px solid #e5e7eb;border-radius:10px;background:#f9fafb;display:flex;align-items:center;gap:12px;transition:all .15s;">
+                <span class="opt-lbl" style="width:30px;height:30px;border-radius:8px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.85rem;flex-shrink:0;">${q.type==='mcq'?labs[oi]:opt[0]}</span>
+                <span style="font-size:11pt;">${escHtml(opt)}</span>
+            </div>`).join('');
+        return`<div class="qcard" id="qcard_${qi}" style="background:#fff;border:2px solid #e5e7eb;border-radius:14px;padding:20px;margin-bottom:16px;">
+            <div style="font-size:.8rem;font-weight:700;color:#6366f1;margin-bottom:6px;">Question ${q.num}</div>
+            <div style="font-weight:600;color:#1f2937;margin-bottom:14px;line-height:1.6;">${escHtml(q.question)}</div>
+            ${optsHTML}
+            <div id="expl_${qi}" style="display:none;margin-top:12px;padding:11px 14px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;font-size:.85rem;color:#1d4ed8;">💡 ${escHtml(q.explanation)}</div>
+        </div>`;
+    }).join('');
+    const mcqCount=QS_DATA.filter(q=>q.type!=='short').length;
+    const interactiveHTML=`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Interactive Quiz</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;padding:24px 16px;}
+.container{max-width:740px;margin:0 auto;background:#fff;border-radius:22px;padding:32px;box-shadow:0 24px 64px rgba(0,0,0,.3);}
+h1{color:#312e81;text-align:center;font-size:1.65rem;margin-bottom:4px;}
+.subtitle{text-align:center;color:#6b7280;font-size:.9rem;margin-bottom:20px;}
+.score-bar{background:#e5e7eb;border-radius:999px;height:11px;margin-bottom:8px;overflow:hidden;}
+.score-fill{height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:999px;transition:width .4s;}
+.score-txt{text-align:right;font-size:.82rem;color:#6b7280;margin-bottom:20px;}
+.opt:hover{border-color:#a5b4fc!important;background:#eef2ff!important;}
+.opt.correct{border-color:#4ade80!important;background:#dcfce7!important;}
+.opt.wrong{border-color:#f87171!important;background:#fee2e2!important;}
+.opt.disabled{pointer-events:none;}
+.score-box{display:none;text-align:center;padding:32px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:18px;margin-top:24px;}
+.score-big{font-size:3.8rem;font-weight:900;color:#15803d;margin-bottom:8px;}
+.score-msg{font-size:1.1rem;font-weight:700;color:#166534;}
+.retry-btn{margin-top:18px;background:#6366f1;color:#fff;border:none;padding:13px 30px;border-radius:11px;font-size:1rem;font-weight:700;cursor:pointer;}
+.retry-btn:hover{background:#4f46e5;}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>📝 Interactive Quiz</h1>
+    <p class="subtitle">Read the text then answer each question</p>
+    <div class="score-bar"><div class="score-fill" id="scoreFill" style="width:0%"></div></div>
+    <div class="score-txt">Score: <span id="scoreNum">0</span> / <span id="scoreTot">${mcqCount}</span></div>
+    ${passageHTML}
+    <div id="questions">${qHTML}</div>
+    <div class="score-box" id="finalScore">
+        <div class="score-big" id="finalNum"></div>
+        <div class="score-msg" id="finalMsg"></div>
+        <button class="retry-btn" onclick="location.reload()">🔄 Try Again</button>
+    </div>
+</div>
+<script>
+const QS=${JSON.stringify(QS_DATA)};
+let score=0,answered=0;
+const mcqTotal=QS.filter(q=>q.type!=='short').length;
+
+function selectOpt(el,qi,oi,correct){
+    const card=document.getElementById('qcard_'+qi);
+    if(card.dataset.answered)return;
+    card.dataset.answered='1';answered++;
+    const opts=card.querySelectorAll('.opt');
+    opts.forEach(o=>o.classList.add('disabled'));
+    if(oi===correct){
+        el.classList.add('correct');
+        el.querySelector('.opt-lbl').style.background='#16a34a';
+        el.querySelector('.opt-lbl').style.color='#fff';
+        score++;
+    }else{
+        el.classList.add('wrong');
+        el.querySelector('.opt-lbl').style.background='#dc2626';
+        el.querySelector('.opt-lbl').style.color='#fff';
+        if(opts[correct]){
+            opts[correct].classList.add('correct');
+            opts[correct].querySelector('.opt-lbl').style.background='#16a34a';
+            opts[correct].querySelector('.opt-lbl').style.color='#fff';
+        }
+    }
+    const expl=document.getElementById('expl_'+qi);
+    if(expl&&QS[qi].explanation)expl.style.display='block';
+    document.getElementById('scoreNum').textContent=score;
+    document.getElementById('scoreFill').style.width=(score/mcqTotal*100)+'%';
+    checkFinished();
+}
+
+function checkShort(qi){
+    const card=document.getElementById('qcard_'+qi);
+    if(card.dataset.answered)return;
+    const inp=document.getElementById('sa_'+qi);
+    const fb=document.getElementById('fb_'+qi);
+    const userAns=inp.value.trim().toLowerCase();
+    const correctAns=QS[qi].answer.toLowerCase();
+    card.dataset.answered='1';inp.disabled=true;
+    fb.style.display='block';
+    if(userAns===correctAns||userAns.includes(correctAns)||correctAns.includes(userAns)){
+        fb.style.background='#dcfce7';fb.style.border='1.5px solid #4ade80';fb.style.color='#166534';
+        fb.innerHTML='✅ Correct! '+(QS[qi].explanation?'<br>💡 '+QS[qi].explanation:'');
+    }else{
+        fb.style.background='#fee2e2';fb.style.border='1.5px solid #f87171';fb.style.color='#991b1b';
+        fb.innerHTML='❌ Model answer: <strong>'+QS[qi].answer+'</strong>'+(QS[qi].explanation?'<br>💡 '+QS[qi].explanation:'');
+    }
+    answered++;checkFinished();
+}
+
+function checkFinished(){
+    if(answered<QS.length)return;
+    const pct=mcqTotal>0?Math.round(score/mcqTotal*100):100;
+    const box=document.getElementById('finalScore');
+    document.getElementById('finalNum').textContent=score+' / '+mcqTotal+' ('+pct+'%)';
+    document.getElementById('finalMsg').textContent=pct>=80?'🎉 Excellent work!':pct>=60?'👍 Good effort! Keep it up.':'📚 Keep practising — you can do it!';
+    box.style.display='block';
+    box.scrollIntoView({behavior:'smooth'});
+}
+<\/script>
+</body>
+</html>`;
+    const blob=new Blob([interactiveHTML],{type:'text/html'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='quiz-student.html';
+    a.click();
+}
+</script>
+</body>
+</html>
